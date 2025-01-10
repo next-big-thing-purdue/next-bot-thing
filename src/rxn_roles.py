@@ -8,7 +8,6 @@ from bot import bot
 rxn_role_commands = bot.create_group('rxn-role', 'Reaction-role related commands')
 rxn_role_add_commands = rxn_role_commands.create_subgroup('add')
 
-## [HAS OVERRIDES]
 @rxn_role_add_commands.command(name='section')
 @discord.option('section_name', type=discord.SlashCommandOptionType.string)
 @commands.has_permissions(manage_messages=True)
@@ -62,7 +61,8 @@ async def add_role(
 
 	await ctx.response.send_message(f'Role added successfully', ephemeral=True)
 
-async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
+@bot.listen('on_raw_reaction_add')
+async def give_role_on_reaction_add(ctx: discord.RawReactionActionEvent):
 	if ctx.user_id == bot.user.id:
 		return
 
@@ -117,7 +117,8 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 		role = guild.get_role(int(role.lstrip('<@&').rstrip('>')))
 		await ctx.member.add_roles(role)
 
-async def on_raw_reaction_remove(ctx: discord.RawReactionActionEvent):
+@bot.listen('on_raw_reaction_remove')
+async def remove_role_on_reaction_removed(ctx: discord.RawReactionActionEvent):
 	channel = await bot.fetch_channel(ctx.channel_id)
 
 	if channel is None:
