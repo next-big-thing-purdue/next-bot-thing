@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from bot import bot
+import config
 
 divisions_commands = bot.create_group('division', 'Division related commands')
 
@@ -26,18 +27,23 @@ async def divisions_new(
 		category = await guild.create_category(division_name)
 	except discord.HTTPException:
 		await ctx.response.send_message(f'invalid division name', ephemeral=True)
+		return
 
 	await category.set_permissions(
 		guild.default_role, # @everyone
 		overwrite=discord.PermissionOverwrite(view_channel=False),
 	)
 
-	# TODO: move to config.py
 	await category.set_permissions(
-		guild.get_role(1277459787302441025), # General Member
+		guild.get_role(config.ROLE_GENERAL_MEMBER_ID),
 		overwrite=discord.PermissionOverwrite(view_channel=True),
 	)
-	
+
+	await category.set_permissions(
+		guild.get_role(config.ROLE_ACTIVE_MEMBER_ID),
+		overwrite=discord.PermissionOverwrite(view_channel=True),
+	)
+
 	await category.create_text_channel(f'{division_abbr}-announcements')
 	await category.create_text_channel(f'{division_abbr}-general')
 	await ctx.response.send_message(f'division created successfully', ephemeral=True)
