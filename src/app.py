@@ -8,6 +8,7 @@ from bot import bot
 import divisions
 import rxn_roles
 import temp_vc
+import verify
 
 @bot.listen
 async def on_ready() -> None:
