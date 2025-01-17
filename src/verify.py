@@ -4,12 +4,54 @@ from discord.ext import commands
 from bot import bot
 import config
 
+class RejectModal(discord.ui.Modal):
+
+	def __init__(self, title, user_id):
+		super().__init__(title=title)
+
+		self.user_id = user_id
+		self.add_item(discord.ui.InputText(label='Reason', placeholder='Reason required'))
+
+	async def callback(self, interaction: discord.Interaction):
+		guild = interaction.guild
+		print(interaction.message)
+		if interaction.message is None:
+			print('[?!] Could not get verification message')
+		else:
+			msg = interaction.message
+			for i, field in enumerate(msg.embeds[0].fields):
+				if field.name == 'Status':
+					msg.embeds[0].set_field_at(i, name='Status', value='Denied')
+				if field.name == 'Verified By':
+					msg.embeds[0].set_field_at(i, name='Denied By', value=f'{interaction.user.name} ({interaction.user.id})')
+			msg.embeds[0].add_field(name='Reason', value=self.children[0].value)
+			await msg.edit(embeds=msg.embeds, view=None)
+
+		await interaction.response.send_message('Verification Complete!', ephemeral=True)
+		member = guild.get_member(self.user_id)
+
+		if member is None:
+			print('[!!] Could not message member for denial')
+			return
+		
+		embed = discord.Embed(
+			).add_field(
+				name='Reason',
+				value=self.children[0].value
+			).set_footer(
+				text='Please fix these issues and then reapply. Feel free to contact a moderator for more info.'
+			)
+		await member.send(
+			content='You have been denied. This is not a ban and you can still reapply once these issues are fixed.',
+			embed=embed
+		)
+
 class ResponseButtons(discord.ui.View):
 	def __init__(self, user_id):
-		self.user_id = user_id
 		super().__init__()
+		self.user_id = user_id
 
-	# TODO: This holds state and does not work when the is restarted. Should instead use message/button data
+	# TODO: This holds state and does not work when the bot is restarted. Should instead use message/button data
 	@discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
 	async def button_accept(self, button: discord.ui.Button, interaction: discord.Interaction):
 		guild = interaction.guild
@@ -43,8 +85,15 @@ class ResponseButtons(discord.ui.View):
 
 	@discord.ui.button(label='Deny', style=discord.ButtonStyle.gray)
 	async def button_deny(self, button: discord.ui.Button, interaction: discord.Interaction):
-		raise NotImplemented
-	
+		guild = interaction.guild
+		if guild is None:
+			print('[?!] Accepted verification from invalid Guild')
+			return
+
+		# modal = discord.ui.Modal(title='Deny')
+		# modal.add_item(item=discord.ui.InputText(label='Reason'))
+		await interaction.response.send_modal(RejectModal('Deny', self.user_id))
+
 	@discord.ui.button(label='Ban', style=discord.ButtonStyle.red)
 	async def button_ban(self, button: discord.ui.Button, interaction: discord.Interaction):
 		raise NotImplemented
