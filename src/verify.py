@@ -5,19 +5,48 @@ from bot import bot
 import config
 
 class ResponseButtons(discord.ui.View):
-	def __init__(self):
+	def __init__(self, user_id):
+		self.user_id = user_id
 		super().__init__()
 
+	# TODO: This holds state and does not work when the is restarted. Should instead use message/button data
 	@discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
-	async def button_accept(self, button: discord.ui.Button, interaction: discord.Integration):
-		raise NotImplemented
-	
+	async def button_accept(self, button: discord.ui.Button, interaction: discord.Interaction):
+		guild = interaction.guild
+		if guild is None:
+			print('[?!] Accepted verification from invalid Guild')
+			return
+
+		role_general_member = guild.get_role(config.ROLE_GENERAL_MEMBER_ID)
+		if role_general_member is None:
+			print('[!!] Could not get general member role')
+			return
+
+		try:
+			await guild.get_member(self.user_id).add_roles(role_general_member, reason='Verified by TODO')
+		except:
+			print('[!!] Could not add role to accepted verification')
+			return
+		
+		if interaction.message is None:
+			print('[?!] Could not get verification message')
+		else:
+			msg = interaction.message
+			for i, field in enumerate(msg.embeds[0].fields):
+				if field.name == 'Status':
+					msg.embeds[0].set_field_at(i, name='Status', value='Verified')
+				if field.name == 'Verified By':
+					msg.embeds[0].set_field_at(i, name='Verified By', value=f'{interaction.user.name} ({interaction.user.id})')
+			await msg.edit(embeds=msg.embeds, view=None)
+
+		await interaction.response.send_message('Verification Complete!', ephemeral=True)
+
 	@discord.ui.button(label='Deny', style=discord.ButtonStyle.gray)
-	async def button_deny(self, button: discord.ui.Button, interaction: discord.Integration):
+	async def button_deny(self, button: discord.ui.Button, interaction: discord.Interaction):
 		raise NotImplemented
 	
 	@discord.ui.button(label='Ban', style=discord.ButtonStyle.red)
-	async def button_ban(self, button: discord.ui.Button, interaction: discord.Integration):
+	async def button_ban(self, button: discord.ui.Button, interaction: discord.Interaction):
 		raise NotImplemented
 
 @bot.slash_command(name='verify')
@@ -67,7 +96,7 @@ async def divisions_new(ctx: discord.ApplicationContext) -> None:
 		)
 
 	try:
-		await channel_verification_review.send(embed=embed, view=ResponseButtons())
+		await channel_verification_review.send(embed=embed, view=ResponseButtons(user.id))
 	except Exception as e:
 		print('[!!] Cannot send to verification review channel')
 		await ctx.response.send_message('An error has occurred, please contact a moderator or bot developer', ephemeral=True)
