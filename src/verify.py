@@ -155,24 +155,38 @@ class ResponseButtons(discord.ui.View):
 
 		await interaction.response.send_modal(BanModal(self.user_id))
 
-@bot.slash_command(name='verify')
-async def divisions_new(ctx: discord.ApplicationContext) -> None:
+async def send_request(ctx: discord.ApplicationContext | discord.Message) -> None:
 	guild: discord.Guild | None = ctx.guild
+	is_msg = isinstance(ctx, discord.Message)
 	if guild is None:
+		if is_msg:
+			return
 		await ctx.response.send_message('`verify` can only be ran in guilds', ephemeral=True)
 		return
 	
-	if ctx.channel_id != config.CHANNEL_VERIFICATION_ID:
+	if is_msg:
+		channel_id = ctx.channel.id
+	else:
+		channel_id = ctx.channel_id
+	if channel_id != config.CHANNEL_VERIFICATION_ID:
+		if is_msg:
+			return
 		await ctx.response.send_message('`verify` cannot be ran in this channel', ephemeral=True)
 		return
 
 	channel_verification_review = guild.get_channel(config.CHANNEL_VERIFICATION_REVIEW_ID)
 	if channel_verification_review is None:
 		print('[!!] Verification review channel is None')
+		if is_msg:
+			return
 		await ctx.respond.send_message('An error has occurred, please contact a moderator or bot developer', ephemeral=True)
 		return
 
-	user: discord.Member = ctx.user
+
+	if is_msg:
+		user: discord.Member = ctx.author
+	else:
+		user: discord.Member = ctx.user
 	embed = discord.Embed(
 		).set_thumbnail(
 			url=user.display_avatar.url
@@ -201,13 +215,33 @@ async def divisions_new(ctx: discord.ApplicationContext) -> None:
 			text='Bots: Ban. Inappropriate display/avatar: Deny.'
 		)
 	embed.color = discord.Color.yellow()
+
+	if is_msg:
+		embed.add_field(
+			name='Message',
+			value=ctx.content
+		)
+
 	try:
 		await channel_verification_review.send(embed=embed, view=ResponseButtons(user.id))
 	except Exception as e:
 		print('[!!] Cannot send to verification review channel')
+		if is_msg:
+			raise e
 		await ctx.response.send_message('An error has occurred, please contact a moderator or bot developer', ephemeral=True)
 		raise e
-
+	
+	if is_msg:
+		return
 	await ctx.response.send_message('Verification request sent! Please sit tight and a moderator will give you access shortly.', ephemeral=True)
 
-	return
+@bot.slash_command(name='verify')
+async def verify(ctx: discord.ApplicationContext) -> None:
+	await send_request(ctx)
+
+@bot.listen()
+async def on_message(message: discord.Message) -> None:
+	if message.channel.id != config.CHANNEL_VERIFICATION_ID:
+		return
+	await send_request(message)
+	await message.delete()
