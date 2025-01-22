@@ -5,6 +5,7 @@ Discord bot for NXBT's Discord server
 1. [Bot Commands](#bot-commands)
 	1. [Divisions](#divisions)
 	2. [Reaction Roles](#reaction-roles)
+	3. [Verification](#verification)
 2. [Development](#development)
 
 ## Bot Commands
@@ -31,6 +32,10 @@ Section: `/rxn-role add ...`
  * `/rxn-role add section <section_name>`
 	 * Creates a new reaction role section
 	 * `section_name` (String) Name of the new section
+
+### Verification
+ * `/verify`
+	 * Sends a verification request to `config.CHANNEL_VERIFICATION_REVIEW_ID`
 
 ## Development
 

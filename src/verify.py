@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from bot import bot
 import config
+import random
 
 class DenyModal(discord.ui.Modal):
 
@@ -41,11 +42,15 @@ class DenyModal(discord.ui.Modal):
 				name='Reason',
 				value=reason
 			).set_footer(
-				text='Please fix these issues and then reapply. Feel free to contact a moderator for more info.'
+				text='Please fix these issues and then reapply. Feel free to send messages in this channel for more info. This channel will be deleted once resolved.'
 			)
 		embed.color = discord.Color.yellow()
-		await member.send(
-			content='You have been denied. This is not a ban and you can still reapply once these issues are fixed.',
+
+		notif_channel = await guild.get_channel(config.CHANNEL_VERIFICATION_ID).category.create_text_channel('notif-' + ''.join([random.choice('0123456789abcdef') for _ in range(6)]))
+		await notif_channel.set_permissions(guild.default_role, overwrite=discord.PermissionOverwrite(view_channel=False, read_messages=False))
+		await notif_channel.set_permissions(member, overwrite=discord.PermissionOverwrite(view_channel=True, read_messages=True, send_messages=True))
+		await notif_channel.send(
+			content=f'<@{member.id}> You have been denied. This is not a ban and you can still reapply once these issues are fixed.',
 			embed=embed
 		)
 
